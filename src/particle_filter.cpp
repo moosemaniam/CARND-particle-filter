@@ -18,6 +18,7 @@
 #include "particle_filter.h"
 
 #define NUM_PARTICLES 20
+#define YAW_RATE_MIN 0.001
 using namespace std;
 
 default_random_engine gen;
@@ -55,6 +56,34 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+
+  normal_distribution<double>n_x(0,std_pos[0]);
+  normal_distribution<double>n_y(0,std_pos[1]);
+  normal_distribution<double>n_theta(0,std_pos[2]);
+
+
+  for(int i=0;i< num_particles;i++){
+    //Predict new state
+
+    double p_theta = particles[i].theta;
+    if(fabs(yaw_rate) < YAW_RATE_MIN)
+    {
+      /* Change in yaw rate is small */
+      particles[i].x += velocity*delta_t*cos(p_theta);
+      particles[i].y += velocity*delta_t*sin(p_theta);
+    }
+    else
+    {
+      particles[i].x +=  velocity/yaw_rate * (sin(p_theta+yaw_rate*delta_t) - sin(p_theta));
+      particles[i].y +=  velocity/yaw_rate * (cos(p_theta)-cos(p_theta+yaw_rate*delta_t));
+      particles[i].theta += yaw_rate*delta_t;
+    }
+
+    /* Add gaussian noise to the prediction */
+    particles[i].x += n_x(gen);
+    particles[i].y += n_y(gen);
+    particles[i].theta += n_theta(gen);
+  }
 
 }
 
