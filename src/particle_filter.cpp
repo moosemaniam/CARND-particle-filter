@@ -17,8 +17,8 @@
 
 #include "particle_filter.h"
 
-#define NUM_PARTICLES 20
-#define YAW_RATE_MIN 0.001
+#define NUM_PARTICLES 100
+#define YAW_RATE_MIN 0.0001
 using namespace std;
 
 default_random_engine gen;
@@ -178,7 +178,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     for(int l =0;l < observations.size();l++){
       double map_x = cos(theta) *observations[l].x - sin(theta)*observations[l].y + x;
-      double map_y = sin(theta) *observations[l].y + cos(theta)*observations[l].y + y;
+      double map_y = sin(theta) *observations[l].x + cos(theta)*observations[l].y + y;
       map_coordinates_obs.push_back(LandmarkObs{observations[l].id,map_x,map_y});
     }
 
@@ -209,8 +209,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
       /* Weight calculations */
       double std_x =  std_landmark[0];
-      double std_y =  std_landmark[0];
-      double exponent = -((pow(predicted_x-obs_x,2)/2*std_x*std_x)+(pow(predicted_y-obs_y,2)/(2*std_y*std_y)));
+      double std_y =  std_landmark[1];
+
+      double exponent = -((pow(predicted_x-obs_x,2)/(2*std_x*std_x))+(pow(predicted_y-obs_y,2)/(2*std_y*std_y)));
 
       double weight_m = (1/(2*M_PI*std_x*std_y))*exp(exponent);
 
@@ -219,7 +220,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   }
 }
 
-void ParticleFilter::resample() {
+void ParticleFilter::resample()
+{
   // TODO: Resample particles with replacement with probability proportional to their weight.
   // NOTE: You may find std::discrete_distribution helpful here.
   //   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
@@ -237,21 +239,26 @@ void ParticleFilter::resample() {
 
   /* Create a discrete random number generator based on the weights of */
   /* the particles */
-   std::random_device rd;
-   std::mt19937 gen(rd());
-   std::discrete_distribution<double> d(weights.begin(),weights.end());
+  double max = *max_element(weights.begin(),weights.end());
+  std::uniform_real_distribution<double> float_random(0.0,max);
 
-   //from sebastian's tutorial
-   for(int i=0;i<num_particles;i++){
-     beta += d(gen) * 2.0;
-     while(beta > weights[index]){
-       beta -= weights[index];
-       index = (index + 1)%num_particles;
-     }
-     resampled_particles.push_back(particles[index]);
-   }
-   /* Update resampled particles */
-   particles=resampled_particles;
+  //from sebastian's tutorial
+  for(int i=0;i<num_particles;i++){
+    double random_val = float_random(gen);
+    beta +=  random_val * 2.0;
+#if 1
+    while(beta > weights[index]){
+      beta -= weights[index];
+      index = (index + 1)%num_particles;
+    }
+#endif
+    resampled_particles.push_back(particles[index]);
+  }
+  /* Update resampled particles */
+  particles=resampled_particles;
+  for(int i=0;i<num_particles;i++){
+    printf("After update weights[%d] %f\n",i,particles[i].weight);
+  }
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
