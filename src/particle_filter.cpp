@@ -242,23 +242,19 @@ void ParticleFilter::resample()
   double max = *max_element(weights.begin(),weights.end());
   std::uniform_real_distribution<double> float_random(0.0,max);
 
-  //from sebastian's tutorial
+  //from sebastian's tutorial. The random wheel!!
   for(int i=0;i<num_particles;i++){
     double random_val = float_random(gen);
     beta +=  random_val * 2.0;
-#if 1
     while(beta > weights[index]){
       beta -= weights[index];
       index = (index + 1)%num_particles;
     }
-#endif
     resampled_particles.push_back(particles[index]);
   }
   /* Update resampled particles */
   particles=resampled_particles;
-  for(int i=0;i<num_particles;i++){
-    printf("After update weights[%d] %f\n",i,particles[i].weight);
-  }
+
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
